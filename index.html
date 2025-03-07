@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>College Attendance Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-50 font-[Inter]">
+    <div class="min-h-screen">
+        <nav class="bg-blue-600 text-white p-4">
+            <h1 class="text-2xl font-bold">College Attendance System</h1>
+        </nav>
+
+        <div class="container mx-auto p-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Students Management -->
+                <div class="bg-white p-4 rounded-lg shadow">
+                    <h2 class="text-xl font-semibold mb-4">Students Management</h2>
+                    <form id="studentForm" class="space-y-3">
+                        <input type="text" id="studentName" placeholder="Student Name" class="w-full p-2 border rounded">
+                        <input type="text" id="studentRoll" placeholder="Roll Number" class="w-full p-2 border rounded">
+                        <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Add Student</button>
+                    </form>
+                    <div id="studentsList" class="mt-4 space-y-2">
+                        <!-- Students will be listed here -->
+                    </div>
+                </div>
+
+                <!-- Subjects Management -->
+                <div class="bg-white p-4 rounded-lg shadow">
+                    <h2 class="text-xl font-semibold mb-4">Subjects Management</h2>
+                    <form id="subjectForm" class="space-y-3">
+                        <input type="text" id="subjectName" placeholder="Subject Name" class="w-full p-2 border rounded">
+                        <input type="text" id="subjectCode" placeholder="Subject Code" class="w-full p-2 border rounded">
+                        <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Add Subject</button>
+                    </form>
+                    <div id="subjectsList" class="mt-4 space-y-2">
+                        <!-- Subjects will be listed here -->
+                    </div>
+                </div>
+
+                <!-- Attendance Marking -->
+                <div class="bg-white p-4 rounded-lg shadow">
+                    <h2 class="text-xl font-semibold mb-4">Mark Attendance</h2>
+                    <form id="attendanceForm" class="space-y-3">
+                        <select id="attendanceSubject" class="w-full p-2 border rounded">
+                            <option value="">Select Subject</option>
+                        </select>
+                        <input type="date" id="attendanceDate" class="w-full p-2 border rounded">
+                        <div id="attendanceList" class="space-y-2">
+                            <!-- Attendance checkboxes will be here -->
+                        </div>
+                        <button type="submit" class="w-full bg-green-600 text-white p-2 rounded hover:bg-green-700">Save Attendance</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Attendance Records -->
+            <div class="mt-8 bg-white p-4 rounded-lg shadow">
+                <h2 class="text-xl font-semibold mb-4">Attendance Records</h2>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Present</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Absent</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendanceRecords" class="bg-white divide-y divide-gray-200">
+                            <!-- Attendance records will be listed here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let students = [];
+        let subjects = [];
+        let attendanceData = [];
+
+        // Initialize data from localStorage
+        document.addEventListener('DOMContentLoaded', () => {
+            students = JSON.parse(localStorage.getItem('students')) || [];
+            subjects = JSON.parse(localStorage.getItem('subjects')) || [];
+            attendanceData = JSON.parse(localStorage.getItem('attendance')) || [];
+            refreshAllLists();
+        });
+
+        // Student Management
+        document.getElementById('studentForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = document.getElementById('studentName').value;
+            const roll = document.getElementById('studentRoll').value;
+            if (name && roll) {
+                students.push({ name, roll });
+                localStorage.setItem('students', JSON.stringify(students));
+                document.getElementById('studentForm').reset();
+                refreshStudentsList();
+            }
+        });
+
+        // Subject Management
+        document.getElementById('subjectForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = document.getElementById('subjectName').value;
+            const code = document.getElementById('subjectCode').value;
+            if (name && code) {
+                subjects.push({ name, code });
+                localStorage.setItem('subjects', JSON.stringify(subjects));
+                document.getElementById('subjectForm').reset();
+                refreshSubjectsList();
+                refreshAttendanceSubjects();
+            }
+        });
+
+        // Attendance Management
+        document.getElementById('attendanceForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const subject = document.getElementById('attendanceSubject').value;
+            const date = document.getElementById('attendanceDate').value;
+            if (subject && date) {
+                const presentStudents = [];
+                students.forEach(student => {
+                    const checkbox = document.getElementById(`attendance-${student.roll}`);
+                    if (checkbox.checked) {
+                        presentStudents.push(student.roll);
+                    }
+                });
+
+                attendanceData.push({
+                    date,
+                    subject,
+                    presentStudents
+                });
+
+                localStorage.setItem('attendance', JSON.stringify(attendanceData));
+                refreshAttendanceRecords();
+                document.getElementById('attendanceForm').reset();
+            }
+        });
+
+        function refreshStudentsList() {
+            const list = document.getElementById('studentsList');
+            list.innerHTML = students.map(student => `
+                <div class="flex justify-between items-center p-2 bg-gray-50 rounded">
+                    <span>${student.name} (${student.roll})</span>
+                    <button onclick="deleteStudent('${student.roll}')" class="text-red-600">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function refreshSubjectsList() {
+            const list = document.getElementById('subjectsList');
+            list.innerHTML = subjects.map(subject => `
+                <div class="flex justify-between items-center p-2 bg-gray-50 rounded">
+                    <span>${subject.name} (${subject.code})</span>
+                    <button onclick="deleteSubject('${subject.code}')" class="text-red-600">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function refreshAttendanceSubjects() {
+            const select = document.getElementById('attendanceSubject');
+            select.innerHTML = '<option value="">Select Subject</option>' + 
+                subjects.map(subject => `
+                    <option value="${subject.code}">${subject.name}</option>
+                `).join('');
+        }
+
+        function refreshAttendanceList() {
+            const list = document.getElementById('attendanceList');
+            list.innerHTML = students.map(student => `
+                <div class="flex items-center space-x-3">
+                    <input type="checkbox" id="attendance-${student.roll}" class="h-4 w-4">
+                    <label for="attendance-${student.roll}">${student.name} (${student.roll})</label>
+                </div>
+            `).join('');
+        }
+
+        function refreshAttendanceRecords() {
+            const records = document.getElementById('attendanceRecords');
+            records.innerHTML = attendanceData.map(record => {
+                const subject = subjects.find(s => s.code === record.subject);
+                const presentCount = record.presentStudents.length;
+                const absentCount = students.length - presentCount;
+                return `
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap">${record.date}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${subject ? subject.name : 'Unknown'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${presentCount}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${absentCount}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function deleteStudent(roll) {
+            students = students.filter(s => s.roll !== roll);
+            localStorage.setItem('students', JSON.stringify(students));
+            refreshAllLists();
+        }
+
+        function deleteSubject(code) {
+            subjects = subjects.filter(s => s.code !== code);
+            localStorage.setItem('subjects', JSON.stringify(subjects));
+            refreshAllLists();
+        }
+
+        function refreshAllLists() {
+            refreshStudentsList();
+            refreshSubjectsList();
+            refreshAttendanceSubjects();
+            refreshAttendanceList();
+            refreshAttendanceRecords();
+        }
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
